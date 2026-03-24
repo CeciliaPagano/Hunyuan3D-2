@@ -47,6 +47,9 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+# Assicura che la root del repo sia nel path (es. quando si lancia da run/)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import torch
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -73,7 +76,7 @@ MODEL_CONFIGS = {
         'shape_model_path': 'tencent/Hunyuan3D-2',
         'shape_subfolder': None,
         'texture_model_path': 'tencent/Hunyuan3D-2',
-        'texture_subfolder': 'hunyuan3d-paint-v2-0-turbo',
+        'texture_subfolder': 'hunyuan3d-paint-v2-0',
         'enable_flashvdm': False,
         'flashvdm_topk_mode': None,
         'num_inference_steps': 50,
