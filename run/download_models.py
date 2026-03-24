@@ -22,10 +22,19 @@ if args.variant == "mini":
     snapshot_download("tencent/Hunyuan3D-2", allow_patterns="hunyuan3d-paint-v2-0-turbo/**", **kw)
 
 elif args.variant == "2.0":
-    print("Scarico 2.0 shape...")
-    snapshot_download("tencent/Hunyuan3D-2", **kw)
-    print("Scarico 2.0 texture...")
-    snapshot_download("tencent/Hunyuan3D-2", allow_patterns="hunyuan3d-paint-v2-0/**", **kw)
+    # Scarica solo i file necessari — esclude gli altri subfolder (turbo, mini, 2.1, ecc.)
+    print("Scarico 2.0 shape (solo file root, esclusi altri subfolder)...")
+    snapshot_download(
+        "tencent/Hunyuan3D-2",
+        ignore_patterns=[
+            "hunyuan3d-paint-v2-0/**",
+            "hunyuan3d-paint-v2-0-turbo/**",
+            "hunyuan3d-dit-v2-mini*/**",
+        ],
+        **kw,
+    )
+    print("Scarico 2.0 texture RGB...")
+    snapshot_download("tencent/Hunyuan3D-2", allow_patterns=["hunyuan3d-paint-v2-0/**"], **kw)
 
 elif args.variant == "2.1":
     print("Scarico 2.1 shape...")
