@@ -1,137 +1,200 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Download modelli Hunyuan3D sul Network Volume (una tantum)
+# Download modelli Hunyuan3D sul Network Volume — UN MODELLO ALLA VOLTA
 #
-# Scarica su /workspace/models/ tutti i modelli necessari per il benchmark.
-# La prossima volta che avvii un pod con lo stesso volume, i modelli sono già lì.
+# Scarica SOLO la variante indicata, cancellando le altre prima se necessario.
+# Network Volume consigliato: 40 GB (sufficiente per una variante alla volta).
 #
 # Uso:
-#   bash run/download_models_to_volume.sh            # scarica tutto (default)
-#   bash run/download_models_to_volume.sh --mini     # solo mini (baseline)
-#   bash run/download_models_to_volume.sh --v20      # solo 2.0
-#   bash run/download_models_to_volume.sh --v21      # solo 2.1
-#   bash run/download_models_to_volume.sh --v25      # solo 2.5 (se disponibile)
+#   bash run/download_models_to_volume.sh --v20      # 2.0 full  (~20-25 GB)
+#   bash run/download_models_to_volume.sh --v21      # 2.1 PBR   (~25-30 GB)
+#   bash run/download_models_to_volume.sh --v25      # 2.5       (~25-30 GB)
+#   bash run/download_models_to_volume.sh --mini     # mini      (~15 GB)
+#
+# Il flag --clean cancella i modelli delle ALTRE varianti prima di scaricare:
+#   bash run/download_models_to_volume.sh --v21 --clean
+#
 # =============================================================================
 set -euo pipefail
 
 MODELS_DIR="/workspace/models"
+HUB_DIR="$MODELS_DIR/hub"
 export HF_HOME="$MODELS_DIR"
-export HUGGINGFACE_HUB_CACHE="$MODELS_DIR/hub"
+export HUGGINGFACE_HUB_CACHE="$HUB_DIR"
+export U2NET_HOME="$MODELS_DIR/u2net"
 
-# Parsing argomenti
-DOWNLOAD_MINI=1
-DOWNLOAD_V20=1
-DOWNLOAD_V21=1
-DOWNLOAD_V25=1
+# ── Parsing argomenti ─────────────────────────────────────────────────────────
+VARIANT=""
+CLEAN=0
 
-if [ $# -gt 0 ]; then
-    DOWNLOAD_MINI=0; DOWNLOAD_V20=0; DOWNLOAD_V21=0; DOWNLOAD_V25=0
-    for arg in "$@"; do
-        case $arg in
-            --mini) DOWNLOAD_MINI=1 ;;
-            --v20)  DOWNLOAD_V20=1 ;;
-            --v21)  DOWNLOAD_V21=1 ;;
-            --v25)  DOWNLOAD_V25=1 ;;
-        esac
-    done
+for arg in "$@"; do
+    case $arg in
+        --mini)  VARIANT="mini" ;;
+        --v20)   VARIANT="2.0" ;;
+        --v21)   VARIANT="2.1" ;;
+        --v25)   VARIANT="2.5" ;;
+        --clean) CLEAN=1 ;;
+        *)
+            echo "Argomento non riconosciuto: $arg"
+            echo "Uso: $0 --v20|--v21|--v25|--mini [--clean]"
+            exit 1 ;;
+    esac
+done
+
+if [ -z "$VARIANT" ]; then
+    echo "ERRORE: specifica la variante da scaricare."
+    echo "Uso: $0 --v20|--v21|--v25|--mini [--clean]"
+    echo ""
+    echo "Spazio attuale su /workspace:"
+    df -h /workspace 2>/dev/null || true
+    exit 1
 fi
 
-mkdir -p "$MODELS_DIR"
+mkdir -p "$HUB_DIR" "$MODELS_DIR/u2net"
 pip install -q huggingface_hub
 
 echo "============================================================"
-echo "  Download modelli Hunyuan3D → $MODELS_DIR"
-echo "  HF_HOME=$HF_HOME"
+echo "  Download Hunyuan3D — variante: $VARIANT"
+echo "  Destinazione: $MODELS_DIR"
 echo "  $(date)"
 echo "============================================================"
+echo ""
+df -h /workspace | grep -v Filesystem || true
+echo ""
 
-# ── Funzione download con progress ────────────────────────────────────────────
+# ── Funzione: mostra e cancella modelli di una variante ───────────────────────
+clean_variant() {
+    local LABEL="$1"
+    shift
+    local DIRS=("$@")
+    echo "  Pulizia modelli $LABEL..."
+    for d in "${DIRS[@]}"; do
+        local full="$HUB_DIR/$d"
+        if [ -d "$full" ]; then
+            SIZE=$(du -sh "$full" 2>/dev/null | cut -f1)
+            echo "    Cancello $d  ($SIZE)"
+            rm -rf "$full"
+        fi
+    done
+}
+
+# ── Pulizia modelli delle ALTRE varianti ──────────────────────────────────────
+if [ "$CLEAN" -eq 1 ]; then
+    echo "--- Pulizia modelli precedenti ---"
+    case "$VARIANT" in
+        "mini")
+            clean_variant "2.0 shape" "models--tencent--Hunyuan3D-2"
+            clean_variant "2.1"       "models--tencent--Hunyuan3D-2.1"
+            clean_variant "2.5"       "models--tencent--Hunyuan3D-2.5"
+            ;;
+        "2.0")
+            clean_variant "mini"      "models--tencent--Hunyuan3D-2mini"
+            clean_variant "2.1"       "models--tencent--Hunyuan3D-2.1"
+            clean_variant "2.5"       "models--tencent--Hunyuan3D-2.5"
+            # NB: Hunyuan3D-2 è condiviso tra mini (texture) e 2.0 (shape+texture)
+            # quindi qui non lo cancelliamo — lo sovrascriviamo col download
+            ;;
+        "2.1")
+            clean_variant "mini"      "models--tencent--Hunyuan3D-2mini"
+            clean_variant "2.0/mini"  "models--tencent--Hunyuan3D-2"
+            clean_variant "2.5"       "models--tencent--Hunyuan3D-2.5"
+            ;;
+        "2.5")
+            clean_variant "mini"      "models--tencent--Hunyuan3D-2mini"
+            clean_variant "2.0/mini"  "models--tencent--Hunyuan3D-2"
+            clean_variant "2.1"       "models--tencent--Hunyuan3D-2.1"
+            ;;
+    esac
+    echo ""
+    echo "  Spazio dopo pulizia:"
+    df -h /workspace | grep -v Filesystem || true
+    echo ""
+fi
+
+# ── Funzione download ─────────────────────────────────────────────────────────
 download_model() {
     local REPO="$1"
     local SUBFOLDER="${2:-}"
     local DESC="$3"
 
-    echo ""
-    echo "  [$DESC]  $REPO${SUBFOLDER:+ / $SUBFOLDER}"
+    echo "  Scarico [$DESC]  →  $REPO${SUBFOLDER:+ / $SUBFOLDER}"
 
     if [ -n "$SUBFOLDER" ]; then
         huggingface-cli download "$REPO" \
             --include "${SUBFOLDER}/**" \
-            --cache-dir "$MODELS_DIR/hub" \
-            --local-dir-use-symlinks False \
-            --quiet
+            --cache-dir "$HUB_DIR" \
+            --local-dir-use-symlinks False
     else
         huggingface-cli download "$REPO" \
-            --cache-dir "$MODELS_DIR/hub" \
-            --local-dir-use-symlinks False \
-            --quiet
+            --cache-dir "$HUB_DIR" \
+            --local-dir-use-symlinks False
     fi
     echo "  OK"
+    echo ""
 }
 
-# ── Mini (baseline, shape + texture turbo) ────────────────────────────────────
-if [ "$DOWNLOAD_MINI" -eq 1 ]; then
-    echo ""
-    echo "=== MINI (baseline) ==="
-    download_model "tencent/Hunyuan3D-2mini" "hunyuan3d-dit-v2-mini-turbo" "mini shape turbo"
-    download_model "tencent/Hunyuan3D-2"     "hunyuan3d-paint-v2-0-turbo"  "mini texture turbo"
-fi
+# ── Download variante selezionata ─────────────────────────────────────────────
+echo "--- Download modelli $VARIANT ---"
 
-# ── 2.0 full (shape 2B + texture v2-0) ───────────────────────────────────────
-if [ "$DOWNLOAD_V20" -eq 1 ]; then
-    echo ""
-    echo "=== 2.0 FULL ==="
-    # shape: repo Hunyuan3D-2, no subfolder = modello 2B principale
-    download_model "tencent/Hunyuan3D-2" "" "2.0 shape (2B)"
-    # texture non-turbo per qualità massima
-    download_model "tencent/Hunyuan3D-2" "hunyuan3d-paint-v2-0" "2.0 texture RGB"
-fi
+case "$VARIANT" in
 
-# ── 2.1 PBR ──────────────────────────────────────────────────────────────────
-if [ "$DOWNLOAD_V21" -eq 1 ]; then
-    echo ""
-    echo "=== 2.1 PBR ==="
-    download_model "tencent/Hunyuan3D-2.1" "hunyuan3d-dit-v2-1"   "2.1 shape"
-    download_model "tencent/Hunyuan3D-2.1" "hunyuan3d-paint-v2-1" "2.1 texture PBR"
-fi
+    "mini")
+        download_model "tencent/Hunyuan3D-2mini" "hunyuan3d-dit-v2-mini-turbo" "mini shape turbo"
+        download_model "tencent/Hunyuan3D-2"     "hunyuan3d-paint-v2-0-turbo"  "mini texture turbo"
+        ;;
 
-# ── 2.5 ──────────────────────────────────────────────────────────────────────
-if [ "$DOWNLOAD_V25" -eq 1 ]; then
-    echo ""
-    echo "=== 2.5 ==="
-    # ⚠️  Verifica che repo e subfolder esistano su HuggingFace prima di eseguire
-    python3 - << 'EOF'
+    "2.0")
+        # shape: intero repo Hunyuan3D-2 (contiene il modello 2B principale)
+        download_model "tencent/Hunyuan3D-2" "" "2.0 shape (2B)"
+        # texture qualità piena (non turbo)
+        download_model "tencent/Hunyuan3D-2" "hunyuan3d-paint-v2-0" "2.0 texture RGB"
+        ;;
+
+    "2.1")
+        download_model "tencent/Hunyuan3D-2.1" "hunyuan3d-dit-v2-1"   "2.1 shape"
+        download_model "tencent/Hunyuan3D-2.1" "hunyuan3d-paint-v2-1" "2.1 texture PBR"
+        ;;
+
+    "2.5")
+        # ⚠️  Verifica che il repo esista su HuggingFace prima di eseguire
+        python3 - << 'EOF'
 try:
     from huggingface_hub import model_info
     info = model_info("tencent/Hunyuan3D-2.5")
-    print(f"  Repo 2.5 trovato: {info.modelId}")
+    print(f"  Repo trovato: {info.modelId}")
 except Exception:
-    print("  ⚠️  tencent/Hunyuan3D-2.5 non trovato su HuggingFace.")
-    print("  Controlla il nome corretto e aggiorna questo script.")
+    print("  ERRORE: tencent/Hunyuan3D-2.5 non trovato su HuggingFace.")
+    print("  Verifica il nome del repo e aggiorna questo script.")
     import sys; sys.exit(1)
 EOF
-    download_model "tencent/Hunyuan3D-2.5" "" "2.5 shape+texture"
-fi
+        download_model "tencent/Hunyuan3D-2.5" "" "2.5 shape+texture"
+        ;;
+esac
 
-# ── Rembg model (scaricato automaticamente, ma lo preloaidiamo) ───────────────
-echo ""
-echo "=== REMBG model ==="
-python3 -c "
-import os; os.environ['U2NET_HOME'] = '$MODELS_DIR/u2net'
-from rembg import remove
-from PIL import Image
-import io
-img = Image.new('RGB', (64, 64), color='red')
-buf = io.BytesIO(); img.save(buf, format='PNG')
-remove(buf.getvalue())
-print('  rembg OK')
-" 2>/dev/null || echo "  rembg: scaricato al primo utilizzo"
+# ── Preload rembg ─────────────────────────────────────────────────────────────
+echo "--- Preload rembg ---"
+python3 - << EOF
+import os, io
+os.environ['U2NET_HOME'] = '$MODELS_DIR/u2net'
+try:
+    from rembg import remove
+    from PIL import Image
+    img = Image.new('RGB', (64, 64), color='red')
+    buf = io.BytesIO(); img.save(buf, format='PNG')
+    remove(buf.getvalue())
+    print("  rembg OK")
+except Exception as e:
+    print(f"  rembg: verrà scaricato al primo utilizzo ({e})")
+EOF
 
-# ── Riepilogo spazio usato ───────────────────────────────────────────────────
+# ── Riepilogo finale ──────────────────────────────────────────────────────────
 echo ""
 echo "============================================================"
-echo "  DOWNLOAD COMPLETATO"
-du -sh "$MODELS_DIR" 2>/dev/null || true
-echo "  I modelli sono in: $MODELS_DIR"
-echo "  Imposta HF_HOME=$MODELS_DIR nei prossimi script per riutilizzarli."
+echo "  DOWNLOAD COMPLETATO — variante $VARIANT"
+echo ""
+du -sh "$MODELS_DIR" 2>/dev/null && echo ""
+df -h /workspace | grep -v Filesystem || true
+echo ""
+echo "  Prossimo step:"
+echo "  bash run/setup_runpod_${VARIANT//.}.sh"
 echo "============================================================"
