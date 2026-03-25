@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Hunyuan3D Benchmark Runner — confronto modelli mini / 2.0 / 2.1 / 2.5
+Hunyuan3D Benchmark Runner — confronto modelli 2.0 mini / 2.0 full / 2.1 / 2.5
 
 Raccoglie per ogni soggetto:
   - timing separati: rembg | shape | texture
@@ -14,7 +14,7 @@ Output di sessione: run_summary.json
 ──────────────────────────────────────────────────────────────────────────────
 QUALE REPO USARE SU RUNPOD:
 
-  mini / 2.0  →  questo stesso repo (Tencent-Hunyuan/Hunyuan3D-2)
+  2.0 mini / 2.0 full  →  questo stesso repo (Tencent-Hunyuan/Hunyuan3D-2)
   2.1         →  clonare Tencent-Hunyuan/Hunyuan3D-2.1, poi usare questo script
   2.5         →  clonare il repo 2.5 (verificare su HuggingFace/GitHub), poi usare questo script
 
@@ -23,11 +23,11 @@ cartella run/ del repo clonato e lanciarlo da lì.
 ──────────────────────────────────────────────────────────────────────────────
 
 Usage:
-    # 1. Baseline locale (mini)
-    python run/benchmark_runpod.py --variant mini --input_dir benchmark/inputs
+    # 1. Baseline locale (2.0 mini)
+    python run/benchmark_runpod.py --variant 2.0 mini --input_dir benchmark/inputs
 
-    # 2. RunPod — Hunyuan3D 2.0 (RTX 3090 24GB, stesso repo)
-    python run/benchmark_runpod.py --variant 2.0 --input_dir benchmark/inputs
+    # 2. RunPod — Hunyuan3D 2.0 full (RTX 3090 24GB, stesso repo)
+    python run/benchmark_runpod.py --variant 2.0 full --input_dir benchmark/inputs
 
     # 3. RunPod — Hunyuan3D 2.1 (da repo 2.1, A100 40GB o --sequential su 24GB)
     python run/benchmark_runpod.py --variant 2.1 --sequential --input_dir benchmark/inputs
@@ -57,10 +57,10 @@ import torch
 # ─────────────────────────────────────────────────────────────────────────────
 
 MODEL_CONFIGS = {
-    'mini': {
-        'description': 'Hunyuan3D-2 mini 0.6B Turbo — baseline locale 8GB VRAM',
+    '2.0 mini': {
+        'description': 'Hunyuan3D-2 2.0 mini 0.6B Turbo — baseline locale 8GB VRAM',
         'shape_model_path': 'tencent/Hunyuan3D-2mini',
-        'shape_subfolder': 'hunyuan3d-dit-v2-mini-turbo',
+        'shape_subfolder': 'hunyuan3d-dit-v2-2.0 mini-turbo',
         'texture_model_path': 'tencent/Hunyuan3D-2',
         'texture_subfolder': 'hunyuan3d-paint-v2-0-turbo',
         'enable_flashvdm': True,
@@ -71,8 +71,8 @@ MODEL_CONFIGS = {
         'has_pbr': False,
         'sequential_default': True,
     },
-    '2.0': {
-        'description': 'Hunyuan3D-2.0 full 2B — texture RGB, no PBR',
+    '2.0 full': {
+        'description': 'Hunyuan3D-2.0 full full 2B — texture RGB, no PBR',
         'shape_model_path': 'tencent/Hunyuan3D-2',
         'shape_subfolder': None,
         'texture_model_path': 'tencent/Hunyuan3D-2',
@@ -234,14 +234,26 @@ def run_shape_gen(image, config: dict, sequential: bool):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def run_face_reduce(mesh, target_faces: int = 40000):
-    from hy3dgen.shapegen import FaceReducer
+    import trimesh as _trimesh
 
     t0 = time.time()
-    reducer = FaceReducer()
-    mesh = reducer(mesh, target_faces)
-    del reducer
-    clear_memory()
 
+    # Normalizza a trimesh.Trimesh
+    if isinstance(mesh, _trimesh.scene.Scene):
+        mesh = _trimesh.util.concatenate(list(mesh.geometry.values()))
+
+    if mesh.faces.shape[0] > target_faces:
+        try:
+            # Prova FaceReducer (pymeshlab) — richiede libOpenGL
+            from hy3dgen.shapegen import FaceReducer
+            reducer = FaceReducer()
+            mesh = reducer(mesh, target_faces)
+            del reducer
+        except Exception:
+            # Fallback: trimesh quadric decimation (richiede fast-simplification)
+            mesh = mesh.simplify_quadric_decimation(target_faces)
+
+    clear_memory()
     return mesh, time.time() - t0
 
 
@@ -562,7 +574,7 @@ def compare_results(results_root: Path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Hunyuan3D benchmark runner — mini / 2.0 / 2.1 / 2.5',
+        description='Hunyuan3D benchmark runner — 2.0 mini / 2.0 full / 2.1 / 2.5',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
