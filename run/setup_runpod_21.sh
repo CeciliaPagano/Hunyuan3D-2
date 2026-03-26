@@ -68,8 +68,7 @@ if [ ! -d "$REPO_DIR" ]; then
 else
     echo "  Repo 2.1 già presente, aggiorno..."
     git -C "$REPO_DIR" fetch origin
-    DEFAULT_BRANCH=$(git -C "$REPO_DIR" remote show origin | grep 'HEAD branch' | awk '{print $NF}')
-    git -C "$REPO_DIR" reset --hard "origin/${DEFAULT_BRANCH}"
+    git -C "$REPO_DIR" reset --hard origin/main
 fi
 cd "$REPO_DIR"
 
