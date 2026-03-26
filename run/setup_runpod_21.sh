@@ -85,7 +85,7 @@ fi
 
 source "$VENV_DIR/bin/activate"
 echo "  Python: $(python --version)"
-pip install --upgrade pip -q
+pip install --upgrade pip setuptools wheel -q
 
 echo "  Installazione dipendenze..."
 [ -f "requirements.txt" ] && pip install -q -r requirements.txt
