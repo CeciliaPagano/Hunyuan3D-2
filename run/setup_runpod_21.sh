@@ -56,7 +56,8 @@ echo "[1/6] Fork con benchmark scripts..."
 if [ ! -d "$FORK_DIR" ]; then
     git clone https://github.com/CeciliaPagano/Hunyuan3D-2.git "$FORK_DIR"
 else
-    git -C "$FORK_DIR" pull
+    git -C "$FORK_DIR" fetch origin
+    git -C "$FORK_DIR" reset --hard origin/master
 fi
 
 # ── 2. Fork 2.1 (hy3dgen con pipeline PBR) ───────────────────────────────────
@@ -66,7 +67,8 @@ if [ ! -d "$REPO_DIR" ]; then
     git clone https://github.com/CeciliaPagano/Hunyuan3D-2.1.git "$REPO_DIR"
 else
     echo "  Repo 2.1 già presente, aggiorno..."
-    git -C "$REPO_DIR" pull
+    git -C "$REPO_DIR" fetch origin
+    git -C "$REPO_DIR" reset --hard origin/master
 fi
 cd "$REPO_DIR"
 
