@@ -48,7 +48,8 @@ from datetime import datetime
 from pathlib import Path
 
 # Assicura che la root del repo sia nel path (es. quando si lancia da run/)
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT))
 
 import torch
 
@@ -293,6 +294,106 @@ def run_texture_gen(mesh, image, config: dict):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Stage: shape + texture specifici per variante 2.1
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _setup_21_paths():
+    """Aggiunge hy3dshape e hy3dpaint al sys.path e applica torchvision fix."""
+    hy3dshape_path = str(_REPO_ROOT / 'hy3dshape')
+    hy3dpaint_path = str(_REPO_ROOT / 'hy3dpaint')
+    if hy3dshape_path not in sys.path:
+        sys.path.insert(0, hy3dshape_path)
+    if hy3dpaint_path not in sys.path:
+        sys.path.insert(0, hy3dpaint_path)
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            'torchvision_fix', str(_REPO_ROOT / 'torchvision_fix.py'))
+        if spec:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            mod.apply_fix()
+    except Exception:
+        pass
+
+
+def run_shape_gen_21(image, config: dict, sequential: bool, seed: int = 1234):
+    _setup_21_paths()
+    from hy3dshape.pipelines import Hunyuan3DDiTFlowMatchingPipeline
+
+    kwargs = {}
+    if sequential:
+        kwargs['device'] = 'cpu'
+
+    print("  Caricamento shape model (2.1)...")
+    pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
+        config['shape_model_path'],
+        **kwargs,
+    )
+    if sequential:
+        pipeline.to('cuda')
+
+    reset_peak_vram()
+    t0 = time.time()
+
+    generator = torch.Generator(device='cuda').manual_seed(seed)
+    try:
+        outputs = pipeline(
+            image=image,
+            num_inference_steps=config['num_inference_steps'],
+            guidance_scale=7.5,
+            generator=generator,
+            octree_resolution=config['octree_resolution'],
+            num_chunks=config['num_chunks'],
+        )
+    except TypeError:
+        outputs = pipeline(
+            image=image,
+            num_inference_steps=config['num_inference_steps'],
+            guidance_scale=7.5,
+        )
+
+    mesh = outputs[0]
+    elapsed = time.time() - t0
+    peak = peak_vram_mb()
+
+    del pipeline
+    clear_memory()
+
+    return mesh, elapsed, peak
+
+
+def run_texture_gen_21(mesh_path: Path, image_path: Path, output_path: Path):
+    _setup_21_paths()
+    from textureGenPipeline import Hunyuan3DPaintPipeline, Hunyuan3DPaintConfig
+
+    conf = Hunyuan3DPaintConfig(6, 512)
+    conf.realesrgan_ckpt_path = str(_REPO_ROOT / 'hy3dpaint' / 'ckpt' / 'RealESRGAN_x4plus.pth')
+    conf.multiview_cfg_path   = str(_REPO_ROOT / 'hy3dpaint' / 'cfgs' / 'hunyuan-paint-pbr.yaml')
+    conf.custom_pipeline      = str(_REPO_ROOT / 'hy3dpaint' / 'hunyuanpaintpbr')
+
+    print("  Caricamento texture model (2.1 PBR)...")
+    paint_pipeline = Hunyuan3DPaintPipeline(conf)
+
+    reset_peak_vram()
+    t0 = time.time()
+
+    paint_pipeline(
+        mesh_path=str(mesh_path),
+        image_path=str(image_path),
+        output_mesh_path=str(output_path),
+    )
+
+    elapsed = time.time() - t0
+    peak = peak_vram_mb()
+
+    del paint_pipeline
+    clear_memory()
+
+    return elapsed, peak
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Raccolta statistiche mesh
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -370,7 +471,11 @@ def run_subject(image_path: Path, config: dict, output_dir: Path, args) -> dict:
     print(f"[2/4] Shape generation ({config['num_inference_steps']} steps, "
           f"octree={config['octree_resolution']})...")
     try:
-        mesh_raw, t_shape, peak_shape = run_shape_gen(image, config, args.sequential)
+        if args.variant == '2.1':
+            mesh_raw, t_shape, peak_shape = run_shape_gen_21(
+                image, config, args.sequential, seed=args.seed)
+        else:
+            mesh_raw, t_shape, peak_shape = run_shape_gen(image, config, args.sequential)
         metrics['timing']['shape_s'] = round(t_shape, 2)
         metrics['vram_peak_mb']['shape'] = round(peak_shape, 1)
         raw_stats = mesh_stats(mesh_raw)
@@ -413,12 +518,18 @@ def run_subject(image_path: Path, config: dict, output_dir: Path, args) -> dict:
     # ── Stage 3: texture ─────────────────────────────────────────────────────
     print("[4/4] Texture generation...")
     try:
-        textured_mesh, t_tex, peak_tex = run_texture_gen(mesh_reduced, image, config)
+        tex_path = subj_dir / f'{subject}_textured.glb'
+        if args.variant == '2.1':
+            # La pipeline 2.1 è file-based: salva mesh ridotta su disco e passa i path
+            reduced_glb_path = subj_dir / f'{subject}_shape_reduced.glb'
+            mesh_reduced.export(str(reduced_glb_path))
+            rembg_path = subj_dir / f'{subject}_rembg.png'
+            t_tex, peak_tex = run_texture_gen_21(reduced_glb_path, rembg_path, tex_path)
+        else:
+            textured_mesh, t_tex, peak_tex = run_texture_gen(mesh_reduced, image, config)
+            textured_mesh.export(str(tex_path))
         metrics['timing']['texture_s'] = round(t_tex, 2)
         metrics['vram_peak_mb']['texture'] = round(peak_tex, 1)
-
-        tex_path = subj_dir / f'{subject}_textured.glb'
-        textured_mesh.export(str(tex_path))
         metrics['files']['textured_glb'] = str(tex_path)
         metrics['files']['textured_glb_kb'] = round(tex_path.stat().st_size / 1024, 1)
         print(f"  Texture completata in {t_tex:.1f}s  |  "
