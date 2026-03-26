@@ -88,9 +88,9 @@ echo "  Python: $(python --version)"
 pip install --upgrade pip setuptools wheel -q
 
 echo "  Installazione dipendenze..."
-[ -f "requirements.txt" ] && pip install -q -r requirements.txt
-[ -d "hy3dgen/texgen/custom_rasterizer" ] && pip install -q -e hy3dgen/texgen/custom_rasterizer
-pip install -q rembg[gpu] trimesh huggingface_hub
+[ -f "requirements.txt" ] && pip install -q --prefer-binary -r requirements.txt
+[ -d "hy3dgen/texgen/custom_rasterizer" ] && pip install -q --prefer-binary -e hy3dgen/texgen/custom_rasterizer
+pip install -q --prefer-binary rembg[gpu] trimesh huggingface_hub
 
 # ── 4. Download modelli 2.1 sul volume ───────────────────────────────────────
 echo ""
