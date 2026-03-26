@@ -164,7 +164,11 @@ def gpu_info() -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def run_rembg(image_path: Path):
-    from hy3dgen.rembg import BackgroundRemover
+    try:
+        from hy3dgen.rembg import BackgroundRemover
+    except ImportError:
+        _setup_21_paths()
+        from hy3dshape.rembg import BackgroundRemover
     from PIL import Image
 
     t0 = time.time()
