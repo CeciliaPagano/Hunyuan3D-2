@@ -91,10 +91,10 @@ echo "  Installazione dipendenze..."
 if [ -f "requirements.txt" ]; then
     # numpy==1.24.4 e pymeshlab==2022.2.post3 non hanno wheel per Python 3.12:
     # installa versioni compatibili prima, poi il resto senza quei pacchetti
-    pip install -q --prefer-binary "numpy>=1.26,<2.0" "pymeshlab>=2023.12"
+    pip install -q --prefer-binary "numpy>=1.26,<2.0" "pymeshlab>=2023.12" "open3d>=0.19.0"
     python3 -c "
 reqs = open('requirements.txt').readlines()
-skip = ('numpy', 'pymeshlab')
+skip = ('numpy', 'pymeshlab', 'open3d')
 filtered = [l for l in reqs if not l.strip().lower().startswith(skip)]
 open('/workspace/req_filtered.txt', 'w').writelines(filtered)
 print(f'  Filtrati {len(reqs)-len(filtered)} pacchetti incompatibili su {len(reqs)} totali')
