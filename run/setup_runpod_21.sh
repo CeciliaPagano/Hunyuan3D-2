@@ -92,8 +92,8 @@ if [ -f "requirements.txt" ]; then
     # numpy==1.24.4 nel requirements.txt non ha wheel per Python 3.12:
     # installa una versione compatibile prima, poi il resto senza numpy
     pip install -q --prefer-binary "numpy>=1.26,<2.0"
-    grep -v "^numpy" requirements.txt > /tmp/req_no_numpy.txt
-    pip install -q --prefer-binary -r /tmp/req_no_numpy.txt
+    grep -v "^numpy" requirements.txt > /workspace/req_no_numpy.txt
+    pip install -q --prefer-binary -r /workspace/req_no_numpy.txt
 fi
 [ -d "hy3dgen/texgen/custom_rasterizer" ] && pip install -q --prefer-binary -e hy3dgen/texgen/custom_rasterizer
 pip install -q --prefer-binary rembg[gpu] trimesh huggingface_hub
