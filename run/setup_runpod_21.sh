@@ -92,7 +92,13 @@ if [ -f "requirements.txt" ]; then
     # numpy==1.24.4 e pymeshlab==2022.2.post3 non hanno wheel per Python 3.12:
     # installa versioni compatibili prima, poi il resto senza quei pacchetti
     pip install -q --prefer-binary "numpy>=1.26,<2.0" "pymeshlab>=2023.12"
-    grep -vE "^numpy|^pymeshlab" requirements.txt > /workspace/req_filtered.txt
+    python3 -c "
+reqs = open('requirements.txt').readlines()
+skip = ('numpy', 'pymeshlab')
+filtered = [l for l in reqs if not l.strip().lower().startswith(skip)]
+open('/workspace/req_filtered.txt', 'w').writelines(filtered)
+print(f'  Filtrati {len(reqs)-len(filtered)} pacchetti incompatibili su {len(reqs)} totali')
+"
     pip install -q --prefer-binary -r /workspace/req_filtered.txt
 fi
 [ -d "hy3dgen/texgen/custom_rasterizer" ] && pip install -q --prefer-binary -e hy3dgen/texgen/custom_rasterizer
