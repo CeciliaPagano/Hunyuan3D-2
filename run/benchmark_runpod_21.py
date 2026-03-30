@@ -14,20 +14,37 @@ Usage:
 import argparse, gc, json, sys, time
 from datetime import datetime
 from pathlib import Path
+
+# ── path setup per repo 2.1 (hy3dshape / hy3dpaint) ────────────────────────
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / 'hy3dshape'))
+sys.path.insert(0, str(_REPO_ROOT / 'hy3dpaint'))
+
 import torch
+
+# Applica fix torchvision per compatibilità 2.1
+try:
+    from torchvision_fix import apply_fix
+    apply_fix()
+except Exception:
+    pass
 
 CONFIG = {
     'description': 'Hunyuan3D-2.1 — PBR (Albedo + Normal + Roughness + Metallic)',
     'shape_model_path': 'tencent/Hunyuan3D-2.1',
     'shape_subfolder': 'hunyuan3d-dit-v2-1',
-    'texture_model_path': 'tencent/Hunyuan3D-2.1',
-    'texture_subfolder': 'hunyuan3d-paint-v2-1',
     'enable_flashvdm': False,
     'num_inference_steps': 50,
     'octree_resolution': 512,
     'num_chunks': 200000,
     'guidance_scale': 7.5,
     'has_pbr': True,
+    # texture — path locali nel repo
+    'paint_multiview_cfg': str(_REPO_ROOT / 'hy3dpaint/cfgs/hunyuan-paint-pbr.yaml'),
+    'paint_custom_pipeline': str(_REPO_ROOT / 'hy3dpaint/hunyuanpaintpbr'),
+    'paint_realesrgan_ckpt': str(_REPO_ROOT / 'hy3dpaint/ckpt/RealESRGAN_x4plus.pth'),
+    'paint_max_views': 6,
+    'paint_resolution': 512,
 }
 
 _SEED = 1234
@@ -54,7 +71,7 @@ def gpu_info():
 
 
 def run_rembg(image_path):
-    from hy3dgen.rembg import BackgroundRemover
+    from hy3dshape.rembg import BackgroundRemover
     from PIL import Image
     t0 = time.time()
     image = Image.open(image_path).convert('RGB')
@@ -65,8 +82,7 @@ def run_rembg(image_path):
 
 
 def run_shape(image, sequential):
-    from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
-    from hy3dgen.shapegen.pipelines import export_to_trimesh
+    from hy3dshape.pipelines import Hunyuan3DDiTFlowMatchingPipeline
 
     kw = {'subfolder': CONFIG['shape_subfolder']}
     if sequential:
@@ -82,16 +98,14 @@ def run_shape(image, sequential):
     torch.cuda.reset_peak_memory_stats()
     t0 = time.time()
     gen = torch.Generator(device='cuda').manual_seed(_SEED)
-    out = pipe(
+    mesh = pipe(
         image=image,
         num_inference_steps=CONFIG['num_inference_steps'],
         guidance_scale=CONFIG['guidance_scale'],
         generator=gen,
         octree_resolution=CONFIG['octree_resolution'],
         num_chunks=CONFIG['num_chunks'],
-        output_type='mesh',
-    )
-    mesh = export_to_trimesh(out)[0]
+    )[0]
     elapsed = time.time() - t0
     pk = peak_mb()
     del pipe; clear_memory()
@@ -99,7 +113,14 @@ def run_shape(image, sequential):
 
 
 def run_face_reduce(mesh, target=40000):
-    from hy3dgen.shapegen import FaceReducer
+    try:
+        from hy3dshape.utils.mesh import FaceReducer
+    except ImportError:
+        try:
+            from hy3dshape import FaceReducer
+        except ImportError:
+            print("  FaceReducer non disponibile in 2.1, skip")
+            return mesh, 0.0
     t0 = time.time()
     r = FaceReducer()
     mesh = r(mesh, target)
@@ -108,18 +129,17 @@ def run_face_reduce(mesh, target=40000):
 
 
 def run_texture(mesh, image):
-    from hy3dgen.texgen import Hunyuan3DPaintPipeline
+    from textureGenPipeline import Hunyuan3DPaintPipeline, Hunyuan3DPaintConfig
 
     print("  Caricamento texture model PBR (2.1)...")
-    pipe = Hunyuan3DPaintPipeline.from_pretrained(
-        CONFIG['texture_model_path'],
-        subfolder=CONFIG['texture_subfolder'],
+    conf = Hunyuan3DPaintConfig(
+        CONFIG['paint_max_views'],
+        CONFIG['paint_resolution'],
     )
-    try:
-        pipe.enable_model_cpu_offload()
-        print("  CPU offload abilitato")
-    except Exception as e:
-        print(f"  Warning: CPU offload non disponibile: {e}")
+    conf.realesrgan_ckpt_path = CONFIG['paint_realesrgan_ckpt']
+    conf.multiview_cfg_path = CONFIG['paint_multiview_cfg']
+    conf.custom_pipeline = CONFIG['paint_custom_pipeline']
+    pipe = Hunyuan3DPaintPipeline(conf)
 
     torch.cuda.reset_peak_memory_stats()
     t0 = time.time()
