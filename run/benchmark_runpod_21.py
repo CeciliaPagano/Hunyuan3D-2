@@ -17,17 +17,28 @@ from pathlib import Path
 
 # ── path setup per repo 2.1 (hy3dshape / hy3dpaint) ────────────────────────
 _REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT))                    # per torchvision_fix
 sys.path.insert(0, str(_REPO_ROOT / 'hy3dshape'))
 sys.path.insert(0, str(_REPO_ROOT / 'hy3dpaint'))
 
-import torch
-
-# Applica fix torchvision per compatibilità 2.1
+# Applica fix torchvision PRIMA di importare torch/basicsr/realesrgan
 try:
     from torchvision_fix import apply_fix
     apply_fix()
-except Exception:
-    pass
+    print("torchvision_fix applicato")
+except Exception as e:
+    # Fallback manuale: ripristina functional_tensor rimosso in torchvision 0.16+
+    try:
+        import torchvision.transforms.functional as _F
+        import types as _types
+        _ft = _types.ModuleType('torchvision.transforms.functional_tensor')
+        _ft.rgb_to_grayscale = _F.rgb_to_grayscale
+        sys.modules['torchvision.transforms.functional_tensor'] = _ft
+        print("torchvision functional_tensor patchato manualmente")
+    except Exception as e2:
+        print(f"Warning torchvision patch: {e2}")
+
+import torch
 
 CONFIG = {
     'description': 'Hunyuan3D-2.1 — PBR (Albedo + Normal + Roughness + Metallic)',
