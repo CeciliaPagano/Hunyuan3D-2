@@ -148,7 +148,9 @@ def run_face_reduce(mesh, target=40000):
     return mesh, time.time() - t0
 
 
-def run_texture(mesh, image):
+def run_texture(mesh_path: str, image):
+    """mesh_path: path stringa al file GLB ridotto (textureGenPipeline vuole un path)."""
+    import trimesh as _trimesh
     from textureGenPipeline import Hunyuan3DPaintPipeline, Hunyuan3DPaintConfig
 
     print("  Caricamento texture model PBR (2.1)...")
@@ -163,11 +165,15 @@ def run_texture(mesh, image):
 
     torch.cuda.reset_peak_memory_stats()
     t0 = time.time()
-    textured = pipe(mesh, image)
+    result = pipe(mesh_path, image)
     elapsed = time.time() - t0
     pk = peak_mb()
     del pipe; clear_memory()
-    return textured, elapsed, pk
+
+    # Il pipeline può restituire un trimesh o un path al file output
+    if isinstance(result, (str, Path)):
+        result = _trimesh.load(str(result))
+    return result, elapsed, pk
 
 
 def _save(m, d, subj):
@@ -245,9 +251,13 @@ def run_subject(img_path, out_dir, args):
     except Exception as e:
         m['error'] = f'face_reduce: {e}'; _save(m, d, subj); return m
 
+    # Salva la mesh ridotta su file (textureGenPipeline vuole un path, non un oggetto)
+    reduced_path = d / f'{subj}_reduced.glb'
+    mesh_red.export(str(reduced_path))
+
     print("[4/4] Texture PBR generation...")
     try:
-        textured, t, pk = run_texture(mesh_red, img)
+        textured, t, pk = run_texture(str(reduced_path), img)
         m['timing']['texture_s'] = round(t, 2)
         m['vram_peak_mb']['texture'] = round(pk, 1)
         tp = d / f'{subj}_textured.glb'; textured.export(str(tp))
