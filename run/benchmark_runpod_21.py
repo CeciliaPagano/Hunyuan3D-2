@@ -113,18 +113,27 @@ def run_shape(image, sequential):
 
 
 def run_face_reduce(mesh, target=40000):
-    try:
-        from hy3dshape.utils.mesh import FaceReducer
-    except ImportError:
-        try:
-            from hy3dshape import FaceReducer
-        except ImportError:
-            print("  FaceReducer non disponibile in 2.1, skip")
-            return mesh, 0.0
+    import trimesh
     t0 = time.time()
-    r = FaceReducer()
-    mesh = r(mesh, target)
-    del r; clear_memory()
+    n = len(mesh.faces)
+    if n <= target:
+        print(f"  {n:,} facce già sotto il target, skip")
+        return mesh, time.time() - t0
+    # Prova FaceReducer (pymeshlab) prima, poi fallback su trimesh
+    try:
+        try:
+            from hy3dshape.utils.mesh import FaceReducer
+        except ImportError:
+            from hy3dshape import FaceReducer
+        r = FaceReducer()
+        mesh = r(mesh, target)
+        del r; clear_memory()
+        return mesh, time.time() - t0
+    except Exception as e:
+        print(f"  FaceReducer fallito ({e}), uso trimesh decimation...")
+    # Fallback: trimesh quadratic decimation
+    ratio = target / n
+    mesh = mesh.simplify_quadratic_decimation(target)
     return mesh, time.time() - t0
 
 
