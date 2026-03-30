@@ -148,29 +148,21 @@ def run_face_reduce(mesh, target=40000):
     return mesh, time.time() - t0
 
 
-def _patch_simplify_mesh_utils():
-    """Sostituisce remesh_mesh di pymeshlab con versione trimesh (pymeshlab non funziona senza libOpenGL)."""
-    try:
-        import hy3dpaint.utils.simplify_mesh_utils as _smu
-        import trimesh as _trimesh
-
-        def _trimesh_remesh(input_path, output_path):
-            mesh = _trimesh.load(input_path, force='mesh')
-            obj_path = output_path.replace('.glb', '.obj')
-            mesh.export(obj_path)
-
-        _smu.remesh_mesh = _trimesh_remesh
-        print("  remesh_mesh patchato con trimesh (pymeshlab bypass)")
-    except Exception as e:
-        print(f"  Warning patch remesh_mesh: {e}")
-
-
 def run_texture(mesh_path: str, image):
     """mesh_path: path stringa al file GLB ridotto (textureGenPipeline vuole un path)."""
     import trimesh as _trimesh
+    import textureGenPipeline as _tgp
     from textureGenPipeline import Hunyuan3DPaintPipeline, Hunyuan3DPaintConfig
 
-    _patch_simplify_mesh_utils()
+    # Patch DOPO l'import: textureGenPipeline ha già copiato remesh_mesh nel suo namespace,
+    # quindi dobbiamo sostituirlo lì (non nel modulo sorgente).
+    def _trimesh_remesh(input_path, output_path):
+        mesh = _trimesh.load(input_path, force='mesh')
+        obj_path = output_path.replace('.glb', '.obj')
+        mesh.export(obj_path)
+
+    _tgp.remesh_mesh = _trimesh_remesh
+    print("  remesh_mesh patchato nel namespace di textureGenPipeline")
     print("  Caricamento texture model PBR (2.1)...")
     conf = Hunyuan3DPaintConfig(
         CONFIG['paint_max_views'],
