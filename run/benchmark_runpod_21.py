@@ -148,18 +148,23 @@ def run_face_reduce(mesh, target=40000):
     return mesh, time.time() - t0
 
 
-def run_texture(mesh_path: str, image):
-    """mesh_path: path stringa al file GLB ridotto (textureGenPipeline vuole un path)."""
+def run_texture(mesh_path: str, image, image_path: str = None):
+    """
+    mesh_path:  path stringa al GLB ridotto (textureGenPipeline vuole un path)
+    image:      PIL.Image con sfondo rimosso
+    image_path: path stringa all'immagine rembg (fallback se pipeline vuole path)
+    """
     import trimesh as _trimesh
     import textureGenPipeline as _tgp
     from textureGenPipeline import Hunyuan3DPaintPipeline, Hunyuan3DPaintConfig
 
     # Patch DOPO l'import: textureGenPipeline ha già copiato remesh_mesh nel suo namespace,
     # quindi dobbiamo sostituirlo lì (non nel modulo sorgente).
+    # Salviamo su output_path esatto e restituiamo il path (il caller potrebbe usarlo).
     def _trimesh_remesh(input_path, output_path):
         mesh = _trimesh.load(input_path, force='mesh')
-        obj_path = output_path.replace('.glb', '.obj')
-        mesh.export(obj_path)
+        mesh.export(output_path)
+        return output_path
 
     _tgp.remesh_mesh = _trimesh_remesh
     print("  remesh_mesh patchato nel namespace di textureGenPipeline")
@@ -175,7 +180,16 @@ def run_texture(mesh_path: str, image):
 
     torch.cuda.reset_peak_memory_stats()
     t0 = time.time()
-    result = pipe(mesh_path, image)
+
+    # Prova con PIL Image; se la pipeline si aspetta un path usa image_path come fallback
+    try:
+        result = pipe(mesh_path, image)
+    except TypeError as e:
+        if image_path is None:
+            raise
+        print(f"  pipe(PIL) fallito ({e}), riprovo con path immagine...")
+        result = pipe(mesh_path, image_path)
+
     elapsed = time.time() - t0
     pk = peak_mb()
     del pipe; clear_memory()
@@ -267,7 +281,7 @@ def run_subject(img_path, out_dir, args):
 
     print("[4/4] Texture PBR generation...")
     try:
-        textured, t, pk = run_texture(str(reduced_path), img)
+        textured, t, pk = run_texture(str(reduced_path), img, m['files'].get('rembg_png'))
         m['timing']['texture_s'] = round(t, 2)
         m['vram_peak_mb']['texture'] = round(pk, 1)
         tp = d / f'{subj}_textured.glb'; textured.export(str(tp))

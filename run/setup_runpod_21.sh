@@ -64,11 +64,11 @@ fi
 echo ""
 echo "[2/6] Fork Hunyuan3D-2.1 (pipeline PBR)..."
 if [ ! -d "$REPO_DIR" ]; then
-    git clone https://github.com/CeciliaPagano/Hunyuan3D-2.1.git "$REPO_DIR"
+    git clone https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1.git "$REPO_DIR"
 else
     echo "  Repo 2.1 già presente, aggiorno..."
     git -C "$REPO_DIR" fetch origin
-    git -C "$REPO_DIR" reset --hard origin/main
+    git -C "$REPO_DIR" reset --hard origin/main || git -C "$REPO_DIR" reset --hard origin/master
 fi
 cd "$REPO_DIR"
 
@@ -101,8 +101,31 @@ print(f'  Filtrati {len(reqs)-len(filtered)} pacchetti incompatibili su {len(req
 "
     pip install -q --prefer-binary -r /workspace/req_filtered.txt
 fi
+# repo 2.1 usa hy3dpaint (non hy3dgen) — controlla entrambi per sicurezza
 [ -d "hy3dgen/texgen/custom_rasterizer" ] && pip install -q --prefer-binary -e hy3dgen/texgen/custom_rasterizer
+[ -d "hy3dpaint/custom_rasterizer" ]       && pip install -q --prefer-binary -e hy3dpaint/custom_rasterizer
+# alcuni repo 2.1 richiedono compilazione esplicita del renderer
+if [ -f "compile_mesh_painter.sh" ]; then
+    echo "  Compilazione mesh painter renderer..."
+    bash compile_mesh_painter.sh || echo "  WARNING: compile_mesh_painter.sh fallito (continuo comunque)"
+fi
 pip install -q --prefer-binary rembg[gpu] trimesh huggingface_hub
+
+# ── 3b. RealESRGAN checkpoint (richiesto da hy3dpaint texture pipeline) ──────
+REALESRGAN_CKPT="$REPO_DIR/hy3dpaint/ckpt/RealESRGAN_x4plus.pth"
+if [ ! -f "$REALESRGAN_CKPT" ]; then
+    echo ""
+    echo "[3b] Download RealESRGAN_x4plus.pth..."
+    mkdir -p "$(dirname "$REALESRGAN_CKPT")"
+    wget -q --show-progress \
+        -O "$REALESRGAN_CKPT" \
+        "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth" \
+        || curl -L -o "$REALESRGAN_CKPT" \
+            "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth"
+    echo "  RealESRGAN OK"
+else
+    echo "[3b] RealESRGAN checkpoint già presente. Skip."
+fi
 
 # ── 4. Download modelli 2.1 sul volume ───────────────────────────────────────
 echo ""
