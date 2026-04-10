@@ -79,37 +79,35 @@ echo "[3/6] Ambiente Python (venv su volume)..."
 if [ -d "$VENV_DIR" ] && [ -f "$VENV_DIR/bin/activate" ]; then
     echo "  venv esistente trovato: $VENV_DIR — riuso."
 else
-    echo "  Creo nuovo venv in $VENV_DIR..."
-    python3 -m venv "$VENV_DIR"
+    echo "  Creo nuovo venv in $VENV_DIR (--system-site-packages)..."
+    # --system-site-packages: eredita torch/torchvision/transformers dal sistema RunPod
+    # così installiamo solo il delta (~2 min invece di 40 min)
+    python3 -m venv "$VENV_DIR" --system-site-packages
 fi
 
 source "$VENV_DIR/bin/activate"
 echo "  Python: $(python --version)"
 pip install --upgrade pip setuptools wheel -q
 
-echo "  Installazione dipendenze..."
-if [ -f "requirements.txt" ]; then
-    # numpy==1.24.4 e pymeshlab==2022.2.post3 non hanno wheel per Python 3.12:
-    # installa versioni compatibili prima, poi il resto senza quei pacchetti
-    pip install -q --prefer-binary "numpy>=1.26,<2.0" "pymeshlab>=2023.12" "open3d>=0.19.0"
-    python3 -c "
-reqs = open('requirements.txt').readlines()
-skip = ('numpy', 'pymeshlab', 'open3d')
-filtered = [l for l in reqs if not l.strip().lower().startswith(skip)]
-open('/workspace/req_filtered.txt', 'w').writelines(filtered)
-print(f'  Filtrati {len(reqs)-len(filtered)} pacchetti incompatibili su {len(reqs)} totali')
-"
-    pip install -q --prefer-binary -r /workspace/req_filtered.txt
-fi
-# repo 2.1 usa hy3dpaint (non hy3dgen) — controlla entrambi per sicurezza
-[ -d "hy3dgen/texgen/custom_rasterizer" ] && pip install -q --prefer-binary -e hy3dgen/texgen/custom_rasterizer
-[ -d "hy3dpaint/custom_rasterizer" ]       && pip install -q --prefer-binary -e hy3dpaint/custom_rasterizer
-# alcuni repo 2.1 richiedono compilazione esplicita del renderer
+echo "  Installazione dipendenze (solo delta rispetto al sistema)..."
+pip install -q --prefer-binary \
+    "numpy>=1.26,<2.0" "pymeshlab>=2023.12" "open3d>=0.19.0" "bpy>=4.2" \
+    einops omegaconf trimesh "rembg[gpu]" huggingface_hub accelerate safetensors \
+    diffusers invisible-watermark PyYAML imageio scipy tqdm
+
+# Estensioni custom del repo 2.1
+[ -d "hy3dpaint/custom_rasterizer" ]        && pip install -q --prefer-binary -e hy3dpaint/custom_rasterizer
+[ -d "hy3dgen/texgen/custom_rasterizer" ]   && pip install -q --prefer-binary -e hy3dgen/texgen/custom_rasterizer
+# hy3dshape e hy3dpaint come pacchetti editabili (necessario per gli import)
+[ -d "hy3dshape" ] && pip install -q --no-deps -e hy3dshape
+[ -d "hy3dpaint" ] && pip install -q --no-deps -e hy3dpaint
+# Anche hy3dgen dal fork Hunyuan3D-2 (per benchmark 2.0 full con lo stesso venv)
+[ -d "$FORK_DIR" ] && pip install -q --no-deps -e "$FORK_DIR"
+
 if [ -f "compile_mesh_painter.sh" ]; then
     echo "  Compilazione mesh painter renderer..."
     bash compile_mesh_painter.sh || echo "  WARNING: compile_mesh_painter.sh fallito (continuo comunque)"
 fi
-pip install -q --prefer-binary rembg[gpu] trimesh huggingface_hub
 
 # ── 3b. RealESRGAN checkpoint (richiesto da hy3dpaint texture pipeline) ──────
 REALESRGAN_CKPT="$REPO_DIR/hy3dpaint/ckpt/RealESRGAN_x4plus.pth"
