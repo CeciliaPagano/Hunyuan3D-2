@@ -6,10 +6,10 @@
 # Network Volume consigliato: 40 GB (sufficiente per una variante alla volta).
 #
 # Uso:
-#   bash run/download_models_to_volume.sh --v20      # 2.0 full  (~20-25 GB)
+#   bash run/download_models_to_volume.sh --v20      # 2.0 full full  (~20-25 GB)
 #   bash run/download_models_to_volume.sh --v21      # 2.1 PBR   (~25-30 GB)
 #   bash run/download_models_to_volume.sh --v25      # 2.5       (~25-30 GB)
-#   bash run/download_models_to_volume.sh --mini     # mini      (~15 GB)
+#   bash run/download_models_to_volume.sh --2.0 mini     # 2.0 mini      (~15 GB)
 #
 # Il flag --clean cancella i modelli delle ALTRE varianti prima di scaricare:
 #   bash run/download_models_to_volume.sh --v21 --clean
@@ -29,7 +29,7 @@ CLEAN=0
 
 for arg in "$@"; do
     case $arg in
-        --mini)  VARIANT="mini" ;;
+        --2.0 mini)  VARIANT="mini" ;;
         --v20)   VARIANT="2.0" ;;
         --v21)   VARIANT="2.1" ;;
         --v25)   VARIANT="2.5" ;;
@@ -91,7 +91,7 @@ if [ "$CLEAN" -eq 1 ]; then
             clean_variant "mini"      "models--tencent--Hunyuan3D-2mini"
             clean_variant "2.1"       "models--tencent--Hunyuan3D-2.1"
             clean_variant "2.5"       "models--tencent--Hunyuan3D-2.5"
-            # NB: Hunyuan3D-2 è condiviso tra mini (texture) e 2.0 (shape+texture)
+            # NB: Hunyuan3D-2 è condiviso tra 2.0 mini (texture) e 2.0 full (shape+texture)
             # quindi qui non lo cancelliamo — lo sovrascriviamo col download
             ;;
         "2.1")
@@ -119,16 +119,17 @@ download_model() {
 
     echo "  Scarico [$DESC]  →  $REPO${SUBFOLDER:+ / $SUBFOLDER}"
 
-    if [ -n "$SUBFOLDER" ]; then
-        huggingface-cli download "$REPO" \
-            --include "${SUBFOLDER}/**" \
-            --cache-dir "$HUB_DIR" \
-            --local-dir-use-symlinks False
-    else
-        huggingface-cli download "$REPO" \
-            --cache-dir "$HUB_DIR" \
-            --local-dir-use-symlinks False
-    fi
+    python3 - << PYEOF
+import os
+from huggingface_hub import snapshot_download
+repo = "$REPO"
+subfolder = "$SUBFOLDER"
+hub_dir = "$HUB_DIR"
+kwargs = dict(repo_id=repo, cache_dir=hub_dir, local_dir_use_symlinks=False)
+if subfolder:
+    kwargs['allow_patterns'] = [f"{subfolder}/**", f"{subfolder}/*"]
+snapshot_download(**kwargs)
+PYEOF
     echo "  OK"
     echo ""
 }
