@@ -307,6 +307,7 @@ def main():
     parser.add_argument('--no_texture', action='store_true')
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--target_faces', type=int, default=40000)
+    parser.add_argument('--only', default=None, help='Esegui solo su un soggetto (es. T9_gatto)')
     args = parser.parse_args()
     _SEED = args.seed
 
@@ -316,6 +317,8 @@ def main():
 
     images = sorted(p for p in input_dir.iterdir()
                     if p.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp'})
+    if args.only:
+        images = [p for p in images if args.only in p.stem]
     if not images:
         print(f"ERRORE: nessuna immagine in {input_dir}"); sys.exit(1)
 
