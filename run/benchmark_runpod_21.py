@@ -142,11 +142,14 @@ def run_face_reduce(mesh, target=40000):
         return mesh, time.time() - t0
     except Exception as e:
         print(f"  FaceReducer fallito ({e}), uso trimesh decimation...")
-    # Fallback: trimesh decimation (nome metodo cambiato nelle versioni recenti)
-    if hasattr(mesh, 'simplify_quadric_decimation'):
-        mesh = mesh.simplify_quadric_decimation(target)
+    # Fallback: converti in trimesh.Trimesh poi decima
+    import trimesh as _trimesh
+    tri = _trimesh.Trimesh(vertices=mesh.vertices, faces=mesh.faces, process=False)
+    if hasattr(tri, 'simplify_quadric_decimation'):
+        tri = tri.simplify_quadric_decimation(target)
     else:
-        mesh = mesh.simplify_quadratic_decimation(target)
+        tri = tri.simplify_quadratic_decimation(target)
+    mesh = tri
     return mesh, time.time() - t0
 
 
