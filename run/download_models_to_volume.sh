@@ -29,7 +29,7 @@ CLEAN=0
 
 for arg in "$@"; do
     case $arg in
-        --2.0 mini)  VARIANT="mini" ;;
+        --mini)  VARIANT="mini" ;;
         --v20)   VARIANT="2.0" ;;
         --v21)   VARIANT="2.1" ;;
         --v25)   VARIANT="2.5" ;;
