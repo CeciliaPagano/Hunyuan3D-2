@@ -4,7 +4,7 @@ Hunyuan3D Benchmark Runner — variante 2.1 PBR
 Da eseguire nel repo Tencent-Hunyuan/Hunyuan3D-2.1 (copiato da setup_runpod_21.sh)
 
   - shape:   tencent/Hunyuan3D-2.1  subfolder=hunyuan3d-dit-v2-1
-  - texture: tencent/Hunyuan3D-2.1  subfolder=hunyuan3d-paint-v2-1  (PBR)
+  - texture: tencent/Hunyuan3D-2.1  subfolder=hunyuan3d-paintpbr-v2-1  (PBR)
 
 Usage:
     python run/benchmark_runpod.py --input_dir benchmark/inputs --seed 1234

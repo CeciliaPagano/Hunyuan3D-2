@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+
+
+
+ #!/usr/bin/env python3
 """
 Hunyuan3D Benchmark Runner — confronto modelli 2.0 mini / 2.0 full / 2.1 / 2.5
 
@@ -93,7 +96,7 @@ MODEL_CONFIGS = {
         'shape_model_path': 'tencent/Hunyuan3D-2.1',
         'shape_subfolder': 'hunyuan3d-dit-v2-1',
         'texture_model_path': 'tencent/Hunyuan3D-2.1',
-        'texture_subfolder': 'hunyuan3d-paint-v2-1',   # TODO: verificare su HF
+        'texture_subfolder': 'hunyuan3d-paintpbr-v2-1',
         'enable_flashvdm': False,
         'flashvdm_topk_mode': None,
         'num_inference_steps': 50,

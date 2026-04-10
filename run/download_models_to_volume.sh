@@ -153,7 +153,7 @@ case "$VARIANT" in
 
     "2.1")
         download_model "tencent/Hunyuan3D-2.1" "hunyuan3d-dit-v2-1"   "2.1 shape"
-        download_model "tencent/Hunyuan3D-2.1" "hunyuan3d-paint-v2-1" "2.1 texture PBR"
+        download_model "tencent/Hunyuan3D-2.1" "hunyuan3d-paintpbr-v2-1" "2.1 texture PBR"
         ;;
 
     "2.5")

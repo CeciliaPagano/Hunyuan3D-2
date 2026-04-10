@@ -40,7 +40,7 @@ elif args.variant == "2.1":
     print("Scarico 2.1 shape...")
     snapshot_download("tencent/Hunyuan3D-2.1", allow_patterns="hunyuan3d-dit-v2-1/**", **kw)
     print("Scarico 2.1 texture PBR...")
-    snapshot_download("tencent/Hunyuan3D-2.1", allow_patterns="hunyuan3d-paint-v2-1/**", **kw)
+    snapshot_download("tencent/Hunyuan3D-2.1", allow_patterns="hunyuan3d-paintpbr-v2-1/**", **kw)
 
 elif args.variant == "2.5":
     print("Scarico 2.5...")
