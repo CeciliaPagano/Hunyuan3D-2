@@ -80,7 +80,8 @@ pip install -q \
     huggingface_hub \
     safetensors \
     sentencepiece \
-    tiktoken
+    tiktoken \
+    protobuf
 
 echo "  Python: $(python3 --version)"
 echo "  Torch: $(python3 -c 'import torch; print(torch.__version__)')"
