@@ -197,7 +197,7 @@ def main():
     print("\nCaricamento modello...")
     clear()
     pipe = FluxPipeline.from_pretrained(args.model, torch_dtype=torch.bfloat16)
-    pipe.enable_model_cpu_offload()
+    pipe.enable_sequential_cpu_offload()
     print("  Modello pronto.\n")
 
     results = []
