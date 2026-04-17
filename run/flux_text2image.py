@@ -57,9 +57,10 @@ STYLE_SUFFIXES: dict[str, str] = {
 
 # Isolation suffix for clean product-style shots (ideal for 3D input)
 ISOLATION_SUFFIX = (
-    "isolated on pure white background, even diffuse lighting, "
-    "no shadows on background, centered composition, single object, no clutter, "
-    "tack sharp, everything in focus, no depth of field, no bokeh, f/22 aperture"
+    "3D CGI render, product visualization, not a photograph, "
+    "pure white background, perfectly uniform ambient lighting, "
+    "no shadows, centered composition, single object, no clutter, "
+    "razor sharp, every part in focus, zero depth of field, no bokeh whatsoever"
 )
 
 
