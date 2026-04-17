@@ -132,8 +132,7 @@ SUBJECTS = [
         "prompt": (
             "A simple stylized human figure standing upright, flat matte gray color, "
             "smooth featureless surface, no texture details, like a store mannequin or scale reference figure, "
-            "full body visible head to toe, neutral A-pose, "
-            f"3D CGI render, pure white background, uniform ambient lighting, no shadows, centered"
+            f"full body visible head to toe, neutral A-pose, {ISOLATION}"
         ),
     },
 
