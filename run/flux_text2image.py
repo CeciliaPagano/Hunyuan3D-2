@@ -28,8 +28,9 @@ MODEL_ID = "black-forest-labs/FLUX.1-dev"
 # ---------------------------------------------------------------------------
 STYLE_SUFFIXES: dict[str, str] = {
     "realistic": (
-        "photorealistic, 8k ultra-detailed, sharp focus, physically accurate materials, "
-        "studio photography, ray-traced lighting"
+        "photorealistic, 8k ultra-detailed, tack sharp, everything in focus, "
+        "no depth of field, no bokeh, f/22 aperture, even diffuse lighting, "
+        "physically accurate materials, product visualization"
     ),
     "cartoon": (
         "cartoon style, vibrant flat colors, cel-shaded, clean outlines, stylized proportions"
@@ -56,8 +57,9 @@ STYLE_SUFFIXES: dict[str, str] = {
 
 # Isolation suffix for clean product-style shots (ideal for 3D input)
 ISOLATION_SUFFIX = (
-    "isolated on pure white background, clean studio shot, soft diffused lighting, "
-    "no shadows on background, centered composition, single object, no clutter"
+    "isolated on pure white background, even diffuse lighting, "
+    "no shadows on background, centered composition, single object, no clutter, "
+    "tack sharp, everything in focus, no depth of field, no bokeh, f/22 aperture"
 )
 
 

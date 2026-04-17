@@ -20,8 +20,9 @@ from diffusers import FluxPipeline
 MODEL_ID = "black-forest-labs/FLUX.1-dev"
 
 ISOLATION = (
-    "isolated on pure white background, clean studio shot, "
-    "soft diffused lighting, no shadows on background, centered composition, single object, no clutter"
+    "isolated on pure white background, even diffuse lighting, "
+    "no shadows on background, centered composition, single object, no clutter, "
+    "tack sharp, everything in focus, no depth of field, no bokeh, f/22 aperture"
 )
 
 SUBJECTS = [
