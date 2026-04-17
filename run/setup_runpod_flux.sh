@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RunPod Setup — FLUX.1-schnell text-to-image
-# Modello: black-forest-labs/FLUX.1-schnell (Apache 2.0, no gating)
+# RunPod Setup — FLUX.1-dev text-to-image
+# Modello: black-forest-labs/FLUX.1-dev (gated — richiede HF_TOKEN + licenza accettata)
 # GPU: ≥16GB VRAM consigliata (usa cpu_offload, minimo ~12GB)
 # Network Volume: 40GB su /workspace (modello ~24GB + venv ~3GB + output)
 #
 # COME USARLO:
-#   1. Avvia pod RunPod (GPU ≥16GB, CUDA 12.x) + Network Volume 40GB su /workspace
-#   2. Connettiti via web terminal e lancia:
-#        cd /workspace && git clone https://github.com/CeciliaPagano/Hunyuan3D-2.git
+#   1. Accetta la licenza FLUX.1-dev su: https://huggingface.co/black-forest-labs/FLUX.1-dev
+#   2. Avvia pod RunPod (GPU ≥16GB, CUDA 12.x) + Network Volume 40GB su /workspace
+#   3. Connettiti via web terminal e lancia:
+#        export HF_TOKEN="hf_..."   # il tuo token HuggingFace
+#        cd /workspace && git clone -b master https://github.com/CeciliaPagano/Hunyuan3D-2.git
 #        bash /workspace/Hunyuan3D-2/run/setup_runpod_flux.sh
 #
 # Dopo il setup, per generare:
@@ -21,16 +23,25 @@ set -euo pipefail
 
 REPO_DIR="/workspace/Hunyuan3D-2"
 VENV_DIR="/workspace/venv-flux"
-MODEL_ID="black-forest-labs/FLUX.1-schnell"
-MODEL_DIR_NAME="models--black-forest-labs--FLUX.1-schnell"
+MODEL_ID="black-forest-labs/FLUX.1-dev"
+MODEL_DIR_NAME="models--black-forest-labs--FLUX.1-dev"
 
 export HF_HOME="/workspace/models"
 export HUGGINGFACE_HUB_CACHE="/workspace/models/hub"
 
 echo "============================================================"
-echo "  FLUX.1-schnell Setup"
+echo "  FLUX.1-dev Setup"
 echo "  $(date)"
 echo "============================================================"
+
+# ── Check HF_TOKEN ───────────────────────────────────────────────────────────
+if [ -z "${HF_TOKEN:-}" ]; then
+    echo ""
+    echo "ERRORE: HF_TOKEN non impostato."
+    echo "  Accetta la licenza su https://huggingface.co/black-forest-labs/FLUX.1-dev"
+    echo "  Poi: export HF_TOKEN=\"hf_...\""
+    exit 1
+fi
 
 # ── 0. Check GPU e spazio ────────────────────────────────────────────────────
 echo ""

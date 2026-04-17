@@ -1,10 +1,11 @@
 """
-Text-to-image with FLUX.1-schnell for isolated 3D-ready asset generation.
+Text-to-image with FLUX.1-dev for isolated 3D-ready asset generation.
 
-FLUX.1-schnell (Apache 2.0, no gating) — best open-source T2I quality as of 2026.
-4 inference steps, bfloat16, no negative prompt, no PAG.
+FLUX.1-dev (gated — accetta licenza su HuggingFace + HF_TOKEN richiesto).
+20 inference steps, bfloat16, guidance_scale 3.5, no negative prompt.
 
 Usage:
+    export HF_TOKEN="hf_..."
     python flux_text2image.py --prompt "a wooden treasure chest, closed, dusty"
     python flux_text2image.py --prompt "a red sports car" --style realistic --seeds 1 2 3 4
     python flux_text2image.py --prompt "a medieval sword" --size 1024 --output outputs/sword.png
@@ -20,7 +21,7 @@ from diffusers import FluxPipeline
 # ---------------------------------------------------------------------------
 # Model
 # ---------------------------------------------------------------------------
-MODEL_ID = "black-forest-labs/FLUX.1-schnell"
+MODEL_ID = "black-forest-labs/FLUX.1-dev"
 
 # ---------------------------------------------------------------------------
 # Style suffixes
@@ -108,8 +109,8 @@ def main() -> None:
     )
     parser.add_argument("--seed", type=int, default=1234, help="Seed singolo (default: 1234).")
     parser.add_argument("--size", type=int, default=1024, help="Dimensione immagine quadrata (default: 1024).")
-    parser.add_argument("--steps", type=int, default=4, help="Inference steps (default: 4, ottimale per schnell).")
-    parser.add_argument("--guidance-scale", type=float, default=0.0, help="Guidance scale (default: 0.0 per schnell).")
+    parser.add_argument("--steps", type=int, default=20, help="Inference steps (default: 20, ottimale per dev).")
+    parser.add_argument("--guidance-scale", type=float, default=3.5, help="Guidance scale (default: 3.5 per dev).")
     parser.add_argument("--show-prompt", action="store_true", help="Stampa il prompt finale prima di generare.")
     parser.add_argument("--model", default=MODEL_ID, help="Model ID HuggingFace (default: FLUX.1-schnell).")
     args = parser.parse_args()
@@ -119,7 +120,7 @@ def main() -> None:
     final_prompt = build_prompt(args.prompt, args.style, isolate)
 
     print("=" * 60)
-    print("FLUX.1-schnell — ASSET 2D GENERATION")
+    print("FLUX.1-dev — ASSET 2D GENERATION")
     print("=" * 60)
     print(f"Stile   : {args.style}")
     print(f"Isolato : {'sì' if isolate else 'no'}")
