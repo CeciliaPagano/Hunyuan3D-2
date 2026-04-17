@@ -78,7 +78,9 @@ pip install -q \
     Pillow \
     pyyaml \
     huggingface_hub \
-    safetensors
+    safetensors \
+    sentencepiece \
+    tiktoken
 
 echo "  Python: $(python3 --version)"
 echo "  Torch: $(python3 -c 'import torch; print(torch.__version__)')"
