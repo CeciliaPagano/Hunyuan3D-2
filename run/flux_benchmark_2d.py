@@ -130,9 +130,9 @@ SUBJECTS = [
         "id": "F1",
         "name": "omino_stilizzato",
         "prompt": (
-            "A simple stylized human figure standing upright, flat matte gray color, "
-            "smooth featureless surface, no texture details, like a store mannequin or scale reference figure, "
-            f"full body visible head to toe, neutral A-pose, {ISOLATION}"
+            "A gray plastic toy figurine shaped like a human, smooth matte surface, "
+            "no facial features, no texture, full body visible, neutral standing pose, "
+            f"small collectible object, {ISOLATION}"
         ),
     },
 
