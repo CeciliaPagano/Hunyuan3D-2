@@ -43,7 +43,8 @@ if [ ! -d "$REPO_DIR" ]; then
     git clone https://github.com/CeciliaPagano/Hunyuan3D-2.git "$REPO_DIR"
 else
     echo "  Repo già presente, aggiorno..."
-    git -C "$REPO_DIR" pull
+    git -C "$REPO_DIR" fetch origin
+    git -C "$REPO_DIR" reset --hard origin/master
 fi
 cd "$REPO_DIR"
 echo "  Commit: $(git -C "$REPO_DIR" rev-parse --short HEAD)"
