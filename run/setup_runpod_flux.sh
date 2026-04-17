@@ -104,15 +104,9 @@ if [ -d "$HF_HOME/hub/$MODEL_DIR_NAME" ]; then
     echo "  Modello già presente sul volume. Skip download."
     du -sh "$HF_HOME/hub/$MODEL_DIR_NAME" 2>/dev/null || true
 else
-    echo "  Download $MODEL_ID (~24GB)..."
-    python3 -c "
-from huggingface_hub import snapshot_download
-snapshot_download(
-    '$MODEL_ID',
-    cache_dir='$HF_HOME/hub',
-)
-print('  Download completato.')
-"
+    echo "  Download $MODEL_ID (~34GB)..."
+    hf download "$MODEL_ID" --cache-dir "$HF_HOME/hub"
+    echo "  Download completato."
 fi
 
 # ── 5. Test generazione ───────────────────────────────────────────────────────
