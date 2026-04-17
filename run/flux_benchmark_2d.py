@@ -125,6 +125,18 @@ SUBJECTS = [
         ),
     },
 
+    # ── Categoria F — Figura umana stilizzata ─────────────────────────────────
+    {
+        "id": "F1",
+        "name": "omino_stilizzato",
+        "prompt": (
+            "A simple stylized human figure standing upright, flat matte gray color, "
+            "smooth featureless surface, no texture details, like a store mannequin or scale reference figure, "
+            "full body visible head to toe, neutral A-pose, "
+            f"3D CGI render, pure white background, uniform ambient lighting, no shadows, centered"
+        ),
+    },
+
     # ── Categoria E — Figura umana realistica ─────────────────────────────────
     {
         "id": "E1",
