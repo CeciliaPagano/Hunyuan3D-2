@@ -28,6 +28,7 @@ MODEL_DIR_NAME="models--black-forest-labs--FLUX.1-dev"
 
 export HF_HOME="/workspace/models"
 export HUGGINGFACE_HUB_CACHE="/workspace/models/hub"
+export HF_HUB_DISABLE_XET=1
 
 echo "============================================================"
 echo "  FLUX.1-dev Setup"
